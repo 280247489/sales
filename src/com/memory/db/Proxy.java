@@ -1,25 +1,18 @@
 package com.memory.db;
 
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
-
 /**
  * @Auther: cui.Memory
  * @Date: 2018/12/19 0019 13:28
  * @Description:
  */
 public class Proxy {
-    private String id;
-    private String name;
-    private String parent;
-    private String parentName;
-    private Integer count;
-
-    private JSONObject goods;
-    private JSONObject goodsSum;
-
-    private JSONObject goodsLs;
-    private JSONObject goodsSumLs;
+    private String id;          //代理
+    private String name;        //名称
+    private String parent;      //父级ID
+    private String parentName;  //父级名称
+    private Integer count;      //团队人数
+    private Integer level;      //代理等级
+    private String type;        //代理体系
 
     @Override
     public String toString() {
@@ -70,35 +63,19 @@ public class Proxy {
         this.count = count;
     }
 
-    public JSONObject getGoods() {
-        return goods;
+    public Integer getLevel() {
+        return level;
     }
 
-    public void setGoods(JSONObject goods) {
-        this.goods = goods;
+    public void setLevel(Integer level) {
+        this.level = level;
     }
 
-    public JSONObject getGoodsSum() {
-        return goodsSum;
+    public String getType() {
+        return type;
     }
 
-    public void setGoodsSum(JSONObject goodsSum) {
-        this.goodsSum = goodsSum;
-    }
-
-    public JSONObject getGoodsLs() {
-        return goodsLs;
-    }
-
-    public void setGoodsLs(JSONObject goodsLs) {
-        this.goodsLs = goodsLs;
-    }
-
-    public JSONObject getGoodsSumLs() {
-        return goodsSumLs;
-    }
-
-    public void setGoodsSumLs(JSONObject goodsSumLs) {
-        this.goodsSumLs = goodsSumLs;
+    public void setType(String type) {
+        this.type = type;
     }
 }

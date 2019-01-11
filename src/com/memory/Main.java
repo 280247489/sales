@@ -12,7 +12,6 @@ public class Main {
     public static void main(String[] args) {
         if(Utils.checkProcess()){
             Utils.read2System();
-            Utils.readGoods();
             LoginFrame.init();
         }else{
             System.exit(0);

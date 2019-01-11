@@ -9,6 +9,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -26,30 +27,43 @@ public class Utils {
     public static SimpleDateFormat sf_yyyyMMdd = new SimpleDateFormat("yyyy-MM-dd");
     public static SimpleDateFormat sf_MM = new SimpleDateFormat("MM");
 
+    public static String type = "体系：";
     public static String xm = "姓名：";
-    public static String dygr = "当月个人销售查询";
-    public static String dytd = "当月团队销售查询";
-    public static String lsgr = "累计个人销售查询";
-    public static String lstd = "累计团队销售查询";
+    public static String xsl = "销售量";
+    public static String hz = "汇 总";
 
     //src/com/memory/db/
     private static final String file_dir = "proxy";
     private static final String dbpath = "local.db";
     private static final String goodspath = "goods.db";
+    private static final String detailpath = "detail.db";
+    private static final String usepath = "use.db";
     private static final String fileLockPath = "file.lock";
     public static FileLock lock = null;
 
     private static int beginMonth = 1;
     private static int endMonth = Integer.parseInt(sf_MM.format(new Date()));
     private static int currentMonth = endMonth;
+
     private static Proxy proxy = null;
+    private static JSONArray proxyJSON = null;
+    private static JSONArray goodsJSON = null;
+    private static JSONObject detailJSON = null;
+    private static JSONObject useJSON = null;
 
-    private static JSONArray jsonArray = null;
-    private static JSONArray jsonArrayGoods = null;
-
-    public static JSONArray getJsonArray() {
-        return jsonArray;
+    public static JSONArray getProxyJSON() {
+        return proxyJSON;
     }
+    public static JSONArray getGoodsJSON() {
+        return goodsJSON;
+    }
+    public static JSONObject getDetailJSON() {
+        return detailJSON;
+    }
+    public static JSONObject getUseJSON() {
+        return useJSON;
+    }
+
     public static Proxy getProxy() {
         return proxy;
     }
@@ -75,31 +89,91 @@ public class Utils {
     public static String getGoodspath() {
         return goodspath;
     }
-    public static JSONArray getJsonArrayGoods() {
-        return jsonArrayGoods;
-    }
 
     /***************************************************************************/
+    public static double getUseSumByidmonth(String id, int month){
+        double sum = 0.0;
+        if(useJSON.containsKey(id)){
+            if(useJSON.getJSONObject(id).containsKey(""+month)){
+                sum = useJSON.getJSONObject(id).getJSONObject(""+month).getDouble("sum");
+            }
+        }
+        return sum;
+    }
+    public static String  getUseBzByidmonth(String id, int month){
+        String bz = "";
+        if(useJSON.containsKey(id)){
+            if(useJSON.getJSONObject(id).containsKey(""+month)){
+                bz = useJSON.getJSONObject(id).getJSONObject(""+month).getString("bz");
+            }
+        }
+        return bz;
+    }
 
-    public static JSONObject createObj(String name, String parent){
+    public static JSONObject getXSzjBymonthid(int month, String id){
+        JSONObject zjJSON = new JSONObject();
+        double z_sum = 0.0;
+        double j_sum = 0.0;
+        for (int i = 0; i < goodsJSON.size(); i++) {
+            JSONObject goodsObjectJSON = goodsJSON.getJSONObject(i);
+
+            double xs_z = goodsObjectJSON.getJSONObject("xs").getDouble("z");
+            double xs_j = goodsObjectJSON.getJSONObject("xs").getDouble("j");
+
+            String goodsName = goodsObjectJSON.getString("name");
+            int count = getCountByidmonthname(id, month, goodsName);
+
+            z_sum+=xs_z*count;
+            j_sum+=xs_j*count;
+        }
+        zjJSON.put("zsum", z_sum);
+        zjJSON.put("jsum", j_sum);
+        return zjJSON;
+    }
+
+    public static int getCountByidmonthname(String proxyId, int selMonth, String goodsName){
+        int count = 0;
+        if(detailJSON.containsKey(proxyId) &&
+                detailJSON.getJSONObject(proxyId).containsKey(""+selMonth) &&
+                detailJSON.getJSONObject(proxyId).getJSONObject(""+selMonth).containsKey(goodsName)){
+            count = detailJSON.getJSONObject(proxyId).getJSONObject(""+selMonth).getInteger(goodsName);
+        }
+        return count;
+    }
+
+    public static void setCountByidmonthname(String proxyId, int selMonth, JSONObject updJSON){
+        JSONObject months = new JSONObject();
+        JSONObject month = new JSONObject();
+        if(detailJSON.containsKey(proxyId)){
+            months = detailJSON.getJSONObject(proxyId);
+            if(months.containsKey(""+selMonth)){
+                month = months.getJSONObject(""+selMonth);
+            }
+        }
+        for(String key : updJSON.keySet()){
+            month.put(key, updJSON.getInteger(key));
+        }
+        months.put(""+selMonth, month);
+        detailJSON.put(proxyId, months);
+        write2DetailDB();
+    }
+
+    public static JSONObject createObj(String name, String parent, Integer level){
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("id", Utils.getShortUuid());
         jsonObject.put("name", name);
         jsonObject.put("parent", parent);
 
-        JSONObject monthGoodsObj = new JSONObject();
-        jsonObject.put("monthGoods", monthGoodsObj);
-
-        jsonArray.add(jsonObject);
+        proxyJSON.add(jsonObject);
 
         return jsonObject;
     }
 
     public static JSONObject getObj(String id){
         JSONObject jsonObject = null;
-        for (int i = 0; i < jsonArray.size(); i++) {
-            if(id.equals(jsonArray.getJSONObject(i).getString("id"))){
-                jsonObject = jsonArray.getJSONObject(i);
+        for (int i = 0; i < proxyJSON.size(); i++) {
+            if(id.equals(proxyJSON.getJSONObject(i).getString("id"))){
+                jsonObject = proxyJSON.getJSONObject(i);
                 break;
             }
         }
@@ -108,8 +182,8 @@ public class Utils {
 
     public static boolean hasNode(String id){
         boolean flag = false;
-        for (int i = 0; i < jsonArray.size(); i++) {
-            if(id.equals(jsonArray.getJSONObject(i).getString("parent"))){
+        for (int i = 0; i < proxyJSON.size(); i++) {
+            if(id.equals(proxyJSON.getJSONObject(i).getString("parent"))){
                 flag = true;
                 break;
             }
@@ -139,27 +213,72 @@ public class Utils {
 
     public static void read2System() {
         File dir = new File(file_dir);
-        File file = new File(file_dir+File.separator+dbpath);
+        File proxyFile = new File(file_dir+File.separator+dbpath);
+        File goodsFile = new File(file_dir+File.separator+goodspath);
+        File detailFile = new File(file_dir+File.separator+detailpath);
+        File useFile = new File(file_dir+File.separator+usepath);
         try{
             if(!dir.exists()){
                 dir.mkdir();
             }
-            if(!file.exists()){
-                file.createNewFile();
+            if(!proxyFile.exists()){
+                proxyFile.createNewFile();
             }
-            FileReader reader = new FileReader(file);
-            BufferedReader br = new BufferedReader(reader);
+            if(!detailFile.exists()){
+                detailFile.createNewFile();
+            }
+            if(!useFile.exists()){
+                useFile.createNewFile();
+            }
 
+            FileReader reader = new FileReader(proxyFile);
+            BufferedReader br = new BufferedReader(reader);
+            //加载proxy
             String line;
             StringBuffer stringBuffer = new StringBuffer("");
             while ((line = br.readLine()) != null) {
                 stringBuffer.append(line);
             }
             if(!"".equals(stringBuffer.toString())){
-                //String jie = Base64Utils.getInstance().decode(stringBuffer.toString());
-                jsonArray = JSONArray.parseArray(stringBuffer.toString());
+                proxyJSON = JSONArray.parseArray(stringBuffer.toString());
             }else{
-                jsonArray = new JSONArray();
+                proxyJSON = new JSONArray();
+            }
+            //加载goods
+            reader = new FileReader(goodsFile);
+            br = new BufferedReader(reader);
+            stringBuffer = new StringBuffer("");
+            while ((line = br.readLine()) != null) {
+                stringBuffer.append(line);
+            }
+            if(!"".equals(stringBuffer.toString())){
+                goodsJSON = JSONArray.parseArray(stringBuffer.toString());
+            }else{
+                goodsJSON = new JSONArray();
+            }
+            //加载detail
+            reader = new FileReader(detailFile);
+            br = new BufferedReader(reader);
+            stringBuffer = new StringBuffer("");
+            while ((line = br.readLine()) != null) {
+                stringBuffer.append(line);
+            }
+            if(!"".equals(stringBuffer.toString())){
+                detailJSON = JSONObject.parseObject(stringBuffer.toString());
+            }else{
+                detailJSON = new JSONObject();
+            }
+            //加载use
+            reader = new FileReader(useFile);
+            br = new BufferedReader(reader);
+            stringBuffer = new StringBuffer("");
+            while ((line = br.readLine()) != null) {
+                stringBuffer.append(line);
+            }
+            if(!"".equals(stringBuffer.toString())){
+                useJSON = JSONObject.parseObject(stringBuffer.toString());
+            }else{
+                useJSON = new JSONObject();
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -167,46 +286,44 @@ public class Utils {
     }
 
     public static void write2LocalDB(){
-        File file = new File(file_dir+File.separator+dbpath);
-        String content = jsonArray.toJSONString();
+        File proxyFile = new File(file_dir+File.separator+dbpath);
+        String proxyContent = proxyJSON.toJSONString();
         try{
-            FileWriter fileWriter=new FileWriter(file.getAbsoluteFile());
+            FileWriter fileWriter=new FileWriter(proxyFile.getAbsoluteFile());
             BufferedWriter bufferedWriter=new BufferedWriter(fileWriter);
-            bufferedWriter.write(content.toCharArray());
+            bufferedWriter.write(proxyContent.toCharArray());
             bufferedWriter.close();
         }catch(Exception e){
             e.printStackTrace();
         }
     }
 
-    public static void readGoods() {
-        File dir = new File(file_dir);
-        File file = new File(file_dir+File.separator+goodspath);
-        System.out.println(file.exists());
+    public static void write2DetailDB(){
+        File detailFile = new File(file_dir+File.separator+detailpath);
+        String detailContent = detailJSON.toJSONString();
         try{
-            if(!dir.exists()){
-                dir.mkdir();
-            }
-            if(!file.exists()){
-                file.createNewFile();
-            }
-            FileReader reader = new FileReader(file);
-            BufferedReader br = new BufferedReader(reader);
-
-            String line;
-            StringBuffer stringBuffer = new StringBuffer("");
-            while ((line = br.readLine()) != null) {
-                stringBuffer.append(line);
-            }
-            if(!"".equals(stringBuffer.toString())){
-                jsonArrayGoods = JSONArray.parseArray(stringBuffer.toString());
-            }else{
-                jsonArrayGoods = new JSONArray();
-            }
-        } catch (IOException e) {
+            FileWriter fileWriter=new FileWriter(detailFile.getAbsoluteFile());
+            BufferedWriter bufferedWriter=new BufferedWriter(fileWriter);
+            bufferedWriter.write(detailContent.toCharArray());
+            bufferedWriter.close();
+        }catch(Exception e){
             e.printStackTrace();
         }
     }
+
+    public static void write2UseDB(){
+        File useFile = new File(file_dir+File.separator+usepath);
+        String detailContent = useJSON.toJSONString();
+        try{
+            FileWriter fileWriter=new FileWriter(useFile.getAbsoluteFile());
+            BufferedWriter bufferedWriter=new BufferedWriter(fileWriter);
+            bufferedWriter.write(detailContent.toCharArray());
+            bufferedWriter.close();
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
     /***************************************************************************/
 
     private static String[] chars = new String[] { "a", "b", "c", "d", "e", "f",

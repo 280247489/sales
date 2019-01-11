@@ -76,7 +76,11 @@ public class ModelFrame {
 
             btn_yes.addActionListener(e -> {
                 if("add".equals(type)){
-                    Utils.createObj(txt_name.getText(), proxy.getId());
+                    if("".equals(proxy.getId())){
+                        Utils.createObj(txt_name.getText(), proxy.getId(), proxy.getLevel()+1);
+                    }else{
+                        Utils.createObj(txt_name.getText(), proxy.getId(), proxy.getLevel()+1);
+                    }
                 }else if("upd".equals(type)){
                     JSONObject object = Utils.getObj(proxy.getId());
                     object.put("name", txt_name.getText());
@@ -86,10 +90,6 @@ public class ModelFrame {
                 jFrame.setVisible(false);// 本窗口隐藏,
                 jFrame.dispose();//本窗口销毁,释放内存资源
                 jFrame = null;
-                /*JOptionPane.showMessageDialog(null,
-                        "输入数字",
-                        "错 误",
-                        JOptionPane.ERROR_MESSAGE);*/
             });
 
             btn_no.addActionListener(e -> {

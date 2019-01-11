@@ -20,7 +20,7 @@ import java.util.List;
  * @Date: 2018/12/19 0019 8:38
  * @Description:
  */
-public class HkFrame {
+public class XsFrame {
     public static JFrame jFrame = null;
     public static Object[][] tableData;
     public static int selectRow;
@@ -39,18 +39,14 @@ public class HkFrame {
             jFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
             jFrame.setLayout(new BorderLayout());
 
-            Object[] columnTitle = {"序 号", "产 品" , "发货数量", "发货数量(编辑列)", "标识"};
+            Object[] columnTitle = {"序 号", "产 品" , "发货数量(对比列)", "发货数量(编辑列)"};
 
-            JSONArray jsonArrayGoods = Utils.getJsonArrayGoods();
-            tableData = new Object[jsonArrayGoods.size()][];
-            JSONObject jsonObjectGoods = Utils.getProxy().getGoods();
-            for (int i = 0; i < jsonArrayGoods.size(); i++) {
-                String goodsName = jsonArrayGoods.getString(i);
-                if(jsonObjectGoods.containsKey(goodsName)){
-                    tableData[i] = new Object[]{(i+1), goodsName, jsonObjectGoods.getInteger(goodsName), jsonObjectGoods.getInteger(goodsName), Utils.getProxy().getId()};
-                }else{
-                    tableData[i] = new Object[]{(i+1), goodsName, 0, 0, Utils.getProxy().getId()};
-                }
+            tableData = new Object[Utils.getGoodsJSON().size()][];
+            for (int i = 0; i < Utils.getGoodsJSON().size(); i++) {
+                int count = Utils.getCountByidmonthname(Utils.getProxy().getId(),
+                        Utils.getCurrentMonth(),
+                        Utils.getGoodsJSON().getJSONObject(i).getString("name"));
+                tableData[i] = new Object[]{(i+1), Utils.getGoodsJSON().getJSONObject(i).getString("name"), count, count};
             }
 
             JTable jTable = new JTable();
@@ -65,14 +61,25 @@ public class HkFrame {
 
             Panel panel = new Panel(new GridLayout(1, 5, 3,0));
             Font font1 =new Font("微软雅黑", Font.PLAIN, 12);//设置字体
-            JButton btn_add=new JButton(Utils.getCurrentMonth() + " 月销售数据-保存");
-            btn_add.setFont(font1);
+
             panel.add(new JLabel());
+
+            JLabel type_label = new JLabel("体系："+Utils.getProxy().getType());
+            type_label.setFont(font);
+            panel.add(type_label);
+
             JLabel name_label = new JLabel("姓名："+Utils.getProxy().getName());
-            name_label.setFont(font1);
+            name_label.setFont(font);
             panel.add(name_label);
+
+            JLabel month_label = new JLabel("月份："+Utils.getCurrentMonth()+ " 月份");
+            month_label.setFont(font);
+            panel.add(month_label);
+
+            JButton btn_add=new JButton("保存销售数据");
+            btn_add.setFont(font1);
             panel.add(btn_add);
-            panel.add(new JLabel());
+
             panel.add(new JLabel());
 
             jFrame.add(panel, BorderLayout.NORTH);
@@ -100,26 +107,20 @@ public class HkFrame {
             jTable.getColumnModel().getColumn(2).setPreferredWidth(300);
             jTable.getColumnModel().getColumn(3).setPreferredWidth(300);
 
-            jTable.getColumnModel().getColumn(4).setMinWidth(0);
-            jTable.getColumnModel().getColumn(4).setMaxWidth(0);
 
             jTable.addPropertyChangeListener(new PropertyChangeListener() {
                 @Override
                 public void propertyChange(PropertyChangeEvent evt) {
                     int changeRow = selectRow;
-                    System.out.println("changeRow: "+ changeRow);
                     int changeCol = selectCol;
                     if(jTable.getRowCount()!=0){
                         int goodsCount = (int) jTable.getValueAt(changeRow, 2);
-
                         try {
                             int changeGoodsCount = Integer.parseInt(jTable.getValueAt(changeRow, 3).toString());
                             jTable.setValueAt(changeGoodsCount, changeRow, 3);
-                            String id = (String) jTable.getValueAt(changeRow, 4);
                             if(goodsCount!=changeGoodsCount){
-                                updJSONObject.put("id", id);
-                                updJSONObject.put("month", ""+Utils.getCurrentMonth());
-                                updJSONObject.put(Utils.getJsonArrayGoods().getString(changeRow), changeGoodsCount);
+                                updJSONObject.put(Utils.getGoodsJSON().getJSONObject(changeRow).getString("name"),
+                                        changeGoodsCount);
                             }
                         } catch (Exception e) {
                             jTable.setValueAt(goodsCount, changeRow, 3);
@@ -138,34 +139,7 @@ public class HkFrame {
                         "提 交",
                         JOptionPane.YES_NO_OPTION);
                 if(flag_int==0){
-
-                    String month = updJSONObject.getString("month");
-                    JSONObject jsonObject = Utils.getObj(updJSONObject.getString("id"));
-                    JSONObject monthGoods;
-                    if(jsonObject.containsKey("monthGoods")){
-                        monthGoods = jsonObject.getJSONObject("monthGoods");
-                    }else{
-                        monthGoods = new JSONObject();
-                    }
-
-                    JSONObject monthGoods_month;
-                    if(monthGoods.containsKey(month)){
-                        monthGoods_month = monthGoods.getJSONObject(month);
-                    }else{
-                        monthGoods_month = new JSONObject();
-                    }
-
-                    JSONArray jsonArrayGoods1 = Utils.getJsonArrayGoods();
-                    for (int i = 0; i < jsonArrayGoods1.size(); i++) {
-                        String goodsName = jsonArrayGoods1.getString(i);
-                        if(updJSONObject.containsKey(goodsName)){
-                            monthGoods_month.put(goodsName, updJSONObject.getInteger(goodsName));
-                        }
-                    }
-                    monthGoods.put(month, monthGoods_month);
-
-                    Utils.write2LocalDB();
-                    Utils.setProxy(null);
+                    Utils.setCountByidmonthname(Utils.getProxy().getId(), Utils.getCurrentMonth(), updJSONObject);
                     IndexFrame.reload();
                     jFrame.setVisible(false);// 本窗口隐藏,
                     jFrame.dispose();//本窗口销毁,释放内存资源

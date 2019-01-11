@@ -13,10 +13,6 @@ import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Enumeration;
 
 /**
@@ -29,11 +25,13 @@ public class IndexFrame {
     public static DefaultMutableTreeNode gongsi = null;
     public static DefaultTreeModel dt = null;
     public static JTree tree = null;
+    public static JLabel label_type;
     public static JLabel label_name;
-    public static JButton label_money;
-    public static JButton label_money_sum;
-    public static JButton label_money_ls;
-    public static JButton label_money_sum_ls;
+    public static JButton label_xsl;
+    public static JButton label_hz;
+    public static JLabel label_1;
+    public static JLabel label_2;
+    public static JButton btn_xs;
 
     public static void init(){
         JFrame jFrame = new JFrame();
@@ -43,25 +41,42 @@ public class IndexFrame {
 
         Font font =new Font("微软雅黑", Font.PLAIN, 16);//设置字体
         Font font1 =new Font("微软雅黑", Font.PLAIN, 12);//设置字体
+        /**============================================================================*/
+        Panel panel = new Panel(new GridLayout(1,3));
+        /**============================================================================*/
+        Panel panel_name = new Panel(new GridLayout(1, 2, 3,0));
+        label_type=new JLabel(Utils.type);
+        label_type.setFont(font);
 
-        Panel panel = new Panel(new GridLayout(2,2));
         label_name=new JLabel(Utils.xm);
         label_name.setFont(font);
 
-        label_money=new JButton(Utils.dygr);
-        label_money.setFont(font);
+        panel_name.add(label_type);
+        panel_name.add(label_name);
+        /**============================================================================*/
+        label_xsl=new JButton(Utils.xsl);
+        label_xsl.setFont(font1);
+        label_xsl.setEnabled(false);
 
-        label_money_sum=new JButton(Utils.dytd);
-        label_money_sum.setFont(font);
+        label_hz=new JButton(Utils.hz);
+        label_hz.setFont(font1);
+        label_hz.setEnabled(false);
 
+        label_1=new JLabel();
+        label_1.setFont(font1);
 
-        label_money_ls=new JButton(Utils.lsgr);
-        label_money_ls.setFont(font);
+        label_2=new JLabel();
+        label_2.setFont(font1);
 
-        label_money_sum_ls=new JButton(Utils.lstd);
-        label_money_sum_ls.setFont(font);
+        Panel panel_sel = new Panel(new GridLayout(1, 4, 3,0));
 
-        Panel panel_btn = new Panel(new GridLayout(1, 5, 3,0));
+        panel_sel.add(label_hz);
+        panel_sel.add(label_1);
+        panel_sel.add(label_xsl);
+        panel_sel.add(label_2);
+
+        /**============================================================================*/
+        Panel panel_btn = new Panel(new GridLayout(1, 3, 3,0));
 
         JComboBox comboBox=new JComboBox();
         for (int i = Utils.getBeginMonth(); i <= Utils.getEndMonth(); i++) {
@@ -70,9 +85,10 @@ public class IndexFrame {
         comboBox.setSelectedItem(Utils.getCurrentMonth());
         panel_btn.add(comboBox);
 
-        JButton btn_hk=new JButton("售");
-        btn_hk.setFont(font1);
-        panel_btn.add(btn_hk);
+        btn_xs=new JButton("售");
+        btn_xs.setFont(font1);
+        btn_xs.setEnabled(false);
+        panel_btn.add(btn_xs);
 
         JButton btn_add=new JButton("增");
         btn_add.setFont(font1);
@@ -86,22 +102,16 @@ public class IndexFrame {
         btn_del.setFont(font1);
         panel_btn.add(btn_del);
 
-        Panel panel_row1 = new Panel(new GridLayout(1, 3, 3,0));
-        panel_row1.add(label_money);
-        panel_row1.add(label_money_sum);
-        panel_row1.add(label_name);
-
-        Panel panel_row2 = new Panel(new GridLayout(1, 3, 3,0));
-        panel_row2.add(label_money_ls);
-        panel_row2.add(label_money_sum_ls);
-        panel_row2.add(panel_btn);
-
-        panel.add(panel_row1);
-        panel.add(panel_row2);
-
+        /**============================================================================*/
+        Panel panel_row = new Panel(new GridLayout(1, 3, 3,0));
+        panel_row.add(panel_name);
+        panel_row.add(panel_sel);
+        panel_row.add(panel_btn);
+        /**============================================================================*/
+        panel.add(panel_row);
 
         //核心
-        gongsi = initTree(null, "", Utils.getJsonArray());
+        gongsi = initTree(null, "", Utils.getProxyJSON());
 
         root = new DefaultMutableTreeNode();
         root.add(gongsi);
@@ -131,7 +141,7 @@ public class IndexFrame {
             if(node != null){
                 try {
                     Proxy proxy = (Proxy)node.getUserObject();
-                    setTitle(proxy.getName());
+                    setTitle(proxy.getId(), proxy.getType(), proxy.getName());
                     Utils.setProxy(proxy);
                 } catch (Exception e1) {
                 }
@@ -142,16 +152,26 @@ public class IndexFrame {
             public void itemStateChanged(ItemEvent e) {
                 if(e.getStateChange() == ItemEvent.SELECTED){
                     Utils.setCurrentMonth((int)comboBox.getSelectedItem());
-                    setTitle("");
-                    Utils.setProxy(null);
                     reload();
                 }
             }
         });
-        btn_hk.addActionListener(e -> {
+        label_hz.addActionListener(e -> {
             if(Utils.getProxy()!=null){
                 //弹层，添加
-                HkFrame.init();
+                HzFrame.init();
+            }
+        });
+        label_xsl.addActionListener(e -> {
+            if(Utils.getProxy()!=null){
+                //弹层，添加
+                XSLFrame.init();
+            }
+        });
+        btn_xs.addActionListener(e -> {
+            if(Utils.getProxy()!=null){
+                //弹层，添加
+                XsFrame.init();
             }
         });
         btn_add.addActionListener(e -> {
@@ -175,7 +195,7 @@ public class IndexFrame {
                 if(flag==0){
                     if(Utils.getProxy().getCount()==0){
                         JSONObject object = Utils.getObj(Utils.getProxy().getId());
-                        Utils.getJsonArray().remove(object);
+                        Utils.getProxyJSON().remove(object);
                         Utils.write2LocalDB();
                         reload();
                     }else{
@@ -198,26 +218,24 @@ public class IndexFrame {
      * @return
      */
     private static DefaultMutableTreeNode initTree(DefaultMutableTreeNode parentNode, String parent, JSONArray array){
+        Proxy top_proxy ;
         if(parentNode == null){
             parentNode = new DefaultMutableTreeNode();
-            Proxy top_proxy = new Proxy();
+            top_proxy = new Proxy();
             top_proxy.setId("");
             top_proxy.setName("公司管理");
-            top_proxy.setCount(0);
             top_proxy.setParent("");
             top_proxy.setParentName("");
+            top_proxy.setCount(0);
 
-            top_proxy.setGoods(new JSONObject());
-            top_proxy.setGoodsSum(new JSONObject());
-
-            top_proxy.setGoodsLs(new JSONObject());
-            top_proxy.setGoodsSumLs(new JSONObject());
+            top_proxy.setLevel(0);
+            top_proxy.setType("");
 
             parentNode.setUserObject(top_proxy);
+        }else{
+            top_proxy = (Proxy)parentNode.getUserObject();
         }
         int parent_count = 0;
-        JSONObject parent_goodsSum = new JSONObject();
-        JSONObject parent_goodsSum_ls = new JSONObject();
         for (int i = 0; i < array.size(); i++) {
             JSONObject obj = array.getJSONObject(i);
             if(parent.equals(obj.getString("parent"))){
@@ -228,34 +246,18 @@ public class IndexFrame {
                 Proxy proxy = new Proxy();
                 proxy.setId(obj.getString("id"));
                 proxy.setName(obj.getString("name"));
-                JSONObject goods = new JSONObject();
-                JSONObject goods_ls = new JSONObject();
-                if(obj.containsKey("monthGoods")){
-                    JSONObject monthGoodsObj = obj.getJSONObject("monthGoods");
-                    for (int j = Utils.getBeginMonth(); j <= Utils.getCurrentMonth() ; j++) {
-                        if(monthGoodsObj.containsKey(""+j)){
-                            goods_ls = plus(goods_ls, monthGoodsObj.getJSONObject(""+j));
-                        }
-                    }
-                    if(monthGoodsObj.containsKey(""+Utils.getCurrentMonth())){
-                        goods = monthGoodsObj.getJSONObject(""+Utils.getCurrentMonth());
-                    }
+                proxy.setParent(obj.getString("parent"));
+                proxy.setParentName(top_proxy.getName());
+                proxy.setCount(0);
+
+                proxy.setLevel(top_proxy.getLevel()+1);
+                if("".equals(proxy.getParent())){
+                    proxy.setType(proxy.getName());
                 }else{
-                    obj.put("monthGoods", new JSONObject());
+                    proxy.setType(top_proxy.getType());
                 }
 
-                proxy.setCount(0);
-                proxy.setParent(obj.getString("parent"));
-                proxy.setParentName(parentNode.getUserObject().toString());
-
-                proxy.setGoods(goods);
-                proxy.setGoodsSum(goods);
-
-                proxy.setGoodsLs(goods_ls);
-                proxy.setGoodsSumLs(goods_ls);
-
                 node.setUserObject(proxy);
-
                 parentNode.add(node);
 
                 if(Utils.hasNode(obj.getString("id"))){
@@ -264,15 +266,12 @@ public class IndexFrame {
                 }
                 //统计for循环内操作后的节点数据汇总，提供父节点使用
                 parent_count += proxy.getCount();
-                parent_goodsSum = plus(parent_goodsSum, proxy.getGoodsSum());
-                parent_goodsSum_ls = plus(parent_goodsSum_ls, proxy.getGoodsSumLs());
+
             }
         }
         //展示父节点
         Proxy proxy = (Proxy) parentNode.getUserObject();
         proxy.setCount(proxy.getCount()+parent_count);
-        proxy.setGoodsSum(plus(proxy.getGoodsSum(), parent_goodsSum));
-        proxy.setGoodsSumLs(plus(proxy.getGoodsSumLs(), parent_goodsSum_ls));
         return parentNode;
     }
 
@@ -300,40 +299,31 @@ public class IndexFrame {
     public static void reload(){
         //核心
         root.removeAllChildren();
-        gongsi = initTree(null, "", Utils.getJsonArray());
+        gongsi = initTree(null, "", Utils.getProxyJSON());
         root.add(gongsi);
         dt.reload();
         expandAll(tree, new TreePath(root), true);
-        if(Utils.getProxy()==null){
-            setTitle("");
-        }
+        Utils.setProxy(null);
+        setTitle("", "","");
     }
-    public static void setTitle(String name){
+    public static void setTitle(String id, String type, String name){
         if(!"".equals(name)){
+            label_type.setText(Utils.type + "   " + type);
             label_name.setText(Utils.xm + "   " + name);
+            label_hz.setEnabled(true);
+            if("".equals(id)){
+                btn_xs.setEnabled(false);
+                label_xsl.setEnabled(false);
+            }else{
+                btn_xs.setEnabled(true);
+                label_xsl.setEnabled(true);
+            }
         }else{
+            label_type.setText(Utils.type);
             label_name.setText(Utils.xm);
-            /*label_money.setText(Utils.dygr);
-            label_money_sum.setText(Utils.dytd);
-            label_money_ls.setText(Utils.lsgr);
-            label_money_sum_ls.setText(Utils.lstd);*/
+            btn_xs.setEnabled(false);
+            label_hz.setEnabled(false);
+            label_xsl.setEnabled(false);
         }
-    }
-
-    public static JSONObject plus(JSONObject object1, JSONObject object2){
-        JSONObject jsonObject = new JSONObject();
-        JSONArray jsonArrayGoods = Utils.getJsonArrayGoods();
-        for (int i = 0; i < jsonArrayGoods.size(); i++) {
-            String goodsName = jsonArrayGoods.getString(i);
-            int sum = 0;
-            if(object1.containsKey(goodsName)){
-                sum += object1.getInteger(goodsName);
-            }
-            if(object2.containsKey(goodsName)){
-                sum += object2.getInteger(goodsName);
-            }
-            jsonObject.put(goodsName, sum);
-        }
-        return jsonObject;
     }
 }

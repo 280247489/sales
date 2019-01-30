@@ -18,11 +18,11 @@ import java.util.UUID;
  * @Description:
  */
 public class Utils {
-    public static final String loginname = "";
-    public static final String password = "";
+    /*public static final String loginname = "";
+    public static final String password = "";*/
 
-    /*public static final String loginname = "houai@yjw";
-    public static final String password = "147258";*/
+    public static final String loginname = "houai@yjw";
+    public static final String password = "sales";
 
     public static SimpleDateFormat sf_yyyyMMdd = new SimpleDateFormat("yyyy-MM-dd");
     public static SimpleDateFormat sf_MM = new SimpleDateFormat("MM");
@@ -33,7 +33,7 @@ public class Utils {
     public static String hz = "汇 总";
 
     //src/com/memory/db/
-    private static final String file_dir = "proxy";
+    private static final String file_dir = "sales";
     private static final String dbpath = "local.db";
     private static final String goodspath = "goods.db";
     private static final String detailpath = "detail.db";

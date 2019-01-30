@@ -313,11 +313,11 @@ public class Utils {
 
     public static void write2UseDB(){
         File useFile = new File(file_dir+File.separator+usepath);
-        String detailContent = useJSON.toJSONString();
+        String useContent = useJSON.toJSONString();
         try{
             FileWriter fileWriter=new FileWriter(useFile.getAbsoluteFile());
             BufferedWriter bufferedWriter=new BufferedWriter(fileWriter);
-            bufferedWriter.write(detailContent.toCharArray());
+            bufferedWriter.write(useContent.toCharArray());
             bufferedWriter.close();
         }catch(Exception e){
             e.printStackTrace();

@@ -12,6 +12,7 @@ import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -21,69 +22,28 @@ import java.util.List;
  */
 public class HzFrame {
     public static JFrame jFrame = null;
+    public static JFrame jFrame1 = null;
     public static Object[][] tableData;
     public static int selectRow;
     public static int selectCol;
+    public static long times;
     public static JSONObject updJSONObject = new JSONObject();
+    public static DefaultTableModel newTableModel;
+    public static JScrollPane jScrollPane;
     public static void init(){
         if(jFrame==null){
             jFrame = new JFrame();
 
             ImageIcon imageIcon = new ImageIcon("title300.png");
             jFrame.setIconImage(imageIcon.getImage());
-
-            Font font =new Font("微软雅黑", Font.PLAIN, 16);//设置字体
-
-            JScrollPane jScrollPane = new JScrollPane();
             jFrame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
             jFrame.setLayout(new BorderLayout());
 
-            //Object[] columnTitle = {"月份", "产 品" , "发货数量", "发货数量(编辑列)", "标识"};
+            jScrollPane = new JScrollPane();
 
-            JSONArray goodsJSON = Utils.getGoodsJSON();
-            //表格头-前3
-            Object[] columnTitle = new Object[Utils.getEndMonth()+3];
-            columnTitle[0] = "序号";
-            columnTitle[1] = "体系";
-            columnTitle[2] = "姓名";
-            //表格内容-前3
-            initTableData_3_method(0, Utils.getProxy().getType(), Utils.getProxy().getId());
+            initData(jScrollPane);
 
-            for (int i = Utils.getBeginMonth(); i <= Utils.getEndMonth(); i++) {
-                columnTitle[2+i] = i+"月份";
-                initTableData_last_method(i);
-            }
-
-            JTable jTable = new JTable();
-            JTableHeader head = jTable.getTableHeader(); // 创建表格标题对象
-            head.setSize(head.getWidth(), 22);// 设置表头大小
-            head.setFont(font);// 设置表格字体
-            jTable.setFont(font);
-            jTable.setRowHeight(22);
-
-            DefaultTableModel newTableModel = new DefaultTableModel(tableData, columnTitle){
-                @Override
-                public boolean isCellEditable(int row,int column){
-                    return false;
-                }
-            };
-            jTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-
-            jTable.setModel(newTableModel);
-            jTable.getColumnModel().getColumn(0).setPreferredWidth(100);
-            jTable.getColumnModel().getColumn(1).setPreferredWidth(150);
-            jTable.getColumnModel().getColumn(2).setPreferredWidth(150);
-            for (int i = 3; i < jTable.getColumnCount(); i++) {
-                jTable.getColumnModel().getColumn(i).setPreferredWidth(400);
-            }
-            //jTable.getTableHeader().setReorderingAllowed(false);   //不可整列移动
-            jTable.getTableHeader().setResizingAllowed(false);   //不可拉动表格
-            DefaultTableCellRenderer tcr = new DefaultTableCellRenderer();// 设置table内容居中
-            tcr.setHorizontalAlignment(SwingConstants.CENTER);// 这句和上句作用一样
-            jTable.setDefaultRenderer(Object.class, tcr);
-
-            jScrollPane.setViewportView(jTable);
-
+            //头
             Panel panel = new Panel(new GridLayout(1, 5, 3,0));
             Font font1 =new Font("微软雅黑", Font.PLAIN, 16);//设置字体
 
@@ -146,10 +106,82 @@ public class HzFrame {
 
                 }
             });
+
         }else{
             jFrame.setFocusable(true);
         }
     }
+
+    private static void initData(JScrollPane jScrollPane) {
+        Font font =new Font("微软雅黑", Font.PLAIN, 16);//设置字体
+        //Object[] columnTitle = {"月份", "产 品" , "发货数量", "发货数量(编辑列)", "标识"};
+
+        JSONArray goodsJSON = Utils.getGoodsJSON();
+        //表格头-前3
+        Object[] columnTitle = new Object[Utils.getEndMonth()+3];
+        columnTitle[0] = "序号";
+        columnTitle[1] = "体系";
+        columnTitle[2] = "姓名";
+        //表格内容-前3
+        initTableData_3_method(0, Utils.getProxy().getType(), Utils.getProxy().getId());
+
+        for (int i = Utils.getBeginMonth(); i <= Utils.getEndMonth(); i++) {
+            columnTitle[2+i] = i+"月份";
+            initTableData_last_method(i);
+        }
+
+        JTable jTable = new JTable();
+        JTableHeader head = jTable.getTableHeader(); // 创建表格标题对象
+        head.setSize(head.getWidth(), 22);// 设置表头大小
+        head.setFont(font);// 设置表格字体
+        jTable.setFont(font);
+        jTable.setRowHeight(22);
+
+        newTableModel = new DefaultTableModel(tableData, columnTitle){
+            @Override
+            public boolean isCellEditable(int row,int column){
+                long currentTimes = new Date().getTime();
+                if(selectRow==row && selectCol==column && (currentTimes<=times+300)){
+                    selectRow = -1;
+                    int month = column-2;
+                    if(month>0){
+                        String id = tableData[row][Utils.getEndMonth()+5-2].toString();
+                        double tempsum = Double.parseDouble(tableData[row][Utils.getEndMonth()+5-1].toString());
+                        double usesum = Utils.getUseSumByidmonth(id, month);
+                        String usebz = Utils.getUseBzByidmonth(id, month);
+
+                        double zsum = getZSUM(month, id);
+                        double jsum = getJSUM(month);
+
+                        //弹层
+                        UseFrame.init(month, id);
+                    }
+                }else{
+                    selectRow=row;
+                    selectCol=column;
+                    times = currentTimes;
+                }
+                return false;
+            }
+        };
+        jTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+
+        jTable.setModel(newTableModel);
+        jTable.getColumnModel().getColumn(0).setPreferredWidth(100);
+        jTable.getColumnModel().getColumn(1).setPreferredWidth(150);
+        jTable.getColumnModel().getColumn(2).setPreferredWidth(150);
+        for (int i = 3; i < jTable.getColumnCount(); i++) {
+            jTable.getColumnModel().getColumn(i).setPreferredWidth(400);
+        }
+        //jTable.getTableHeader().setReorderingAllowed(false);   //不可整列移动
+        jTable.getTableHeader().setResizingAllowed(false);   //不可拉动表格
+        DefaultTableCellRenderer tcr = new DefaultTableCellRenderer();// 设置table内容居中
+        tcr.setHorizontalAlignment(SwingConstants.CENTER);// 这句和上句作用一样
+        jTable.setDefaultRenderer(Object.class, tcr);
+
+        jScrollPane.setViewportView(jTable);
+    }
+
     public static void initTableData_3_method(int index, String type, String parentId){
         if(!"".equals(Utils.getProxy().getId())){
             tableData = new Object[Utils.getProxy().getCount()+1][];
@@ -199,7 +231,8 @@ public class HzFrame {
 
             tempsum = tempsum+zsum+jsum-usesum;
             tableData[i][Utils.getEndMonth()+5-1] = tempsum;
-            tableData[i][2+month] =((fflag?"-":tempsum))+((usesum>0)?" ----- ["+usesum+"元（"+usebz+"）]":"");
+            String useText = ((usesum>0)?"—(使用金额：["+usesum+"元]，备注：["+usebz+"])":"");
+            tableData[i][2+month] =(tempsum<0?"余额：["+tempsum+"元]"+useText:fflag?"-":"[余额："+tempsum+"元]"+useText);
         }
     }
     static List<String> proxyList;
@@ -248,5 +281,10 @@ public class HzFrame {
             jsum += count*jxs;
         }
         return jsum;
+    }
+    public static void reload(){
+        newTableModel.getDataVector().clear();
+        initData(jScrollPane);
+        jScrollPane.validate();
     }
 }
